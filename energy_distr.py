@@ -5,10 +5,8 @@ import matplotlib.colors as colors
 
 from scipy.spatial import KDTree
 
-cells = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\KUVSH.CEL', np.dtype(int))
-
-listDet = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\kuvsh2\kuvsh2\initials\dets_fuel_v.lst')
-totDet = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\kuvsh2\kuvsh2\results\energy_fuel.res')
+#cells = np.loadtxt('E:\\ks_work\\calc\\kuvsh_emk_1\\KUVSH.CEL', np.dtype(int))#
+cells = np.loadtxt('D:\\ipm_prj\\calculations\\kuvsh\\KUVSH.CEL', np.dtype(int))
 
 nx = 116
 ny = 116
@@ -27,7 +25,7 @@ for i in range(cells.size/2):
     filled += fill
 print filled
 
-gridF = open(r'D:\ipm_prj\calculations\emk_5\KUVSH.GRD', 'r')
+gridF = open('D:\\ipm_prj\\calculations\\kuvsh\\KUVSH.GRD', 'r')
 gridF.readline()#<FULL>
 gridF.readline()#1
 gridF.readline()#<EQUAL (0-not equal 1-equal)>
@@ -80,98 +78,26 @@ print xmin, xmax, ymin, ymax, zmin, zmax
 
 
 def f():
-    enDistr = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\energy_distribution')
+    enDistr = np.loadtxt('D:\\ipm_prj\\calculations\\emk_5\\energy_distribution')
     enSpaceCheck = np.full((nx, ny, nz), 1e-32)
     for entry in enDistr:
         ix, iy, iz = map(lambda x: int(x)-1,entry[:-1])
         enSpaceCheck[ix, iy, iz] = entry[-1]
     return enSpaceCheck
 enSpaceCheck = f()
+print np.unique(enSpaceCheck[:,58,:].T, axis = 0)
         
-
-xx = []
-yy = []
-zz = []
-enn = []
-for en,entry in zip(totDet,listDet):
-    x,y,z = map(float,entry[:-1])
-    if en >1e-15:
-        xx.append(x)
-        yy.append(y)
-        zz.append(z)
-        enn.append(en)
 x05 = [0.5*(x1+x2) for x1,x2 in zip(xi[1:], xi[:-1])]
 y05 = [0.5*(x1+x2) for x1,x2 in zip(yi[1:], yi[:-1])]
 z05 = [0.5*(x1+x2) for x1,x2 in zip(zi[1:], zi[:-1])]
+slicey = 58
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+im = ax.contourf(z05, x05,np.squeeze(enSpaceCheck[:,slicey,:]))
+plt.colorbar(im)
+plt.show()
 
-def filter_dets():
-    counter = 0
-    listDet_filtered = []
-    totDet_filtered = []
-    for en,entry in zip(totDet, listDet[:, :-1]):
-        if x05[xmin]<=entry[0]<=x05[xmax] and y05[ymin]<=entry[0]<=y05[ymax] and z05[zmin]<=entry[0]<=z05[zmax]:
-            listDet_filtered.append(entry)
-            totDet_filtered.append(en)
-    return listDet_filtered, totDet_filtered
-listDet, totDet = filter_dets()
-
-def get_this_to_work():
-    unique, counts = np.unique(space, return_counts=True)
-    
-    enSpaceToFile = np.zeros((dict(zip(unique, counts))[4],4))
-    tree = KDTree(listDet)
-    counter = 0
-    with open('energy_distribution', 'w') as f:
-        for ix in range(xmin,xmax+1):
-            for iy in range(ymin,ymax+1):
-                for iz in range(zmin,zmax+1):
-                    if space[ix,iy,iz] == 4:
-                        
-                        d,i = tree.query((x05[ix],y05[iy],z05[iz]))
-                        
-                        f.write("\t".join(map(str,[ix+1, iy+1, iz+1]))+"\t{:.3E}\n".format(totDet[i]))
-    
-get_this_to_work()
-def energy_distribution():    
-    enSpace = np.full((nx, ny, nz), 1e-32)
-    tree = KDTree(listDet)
-    counter = 0
-    for ix in range(xmin,xmax+1):
-        for iy in range(ymin,ymax+1):
-            for iz in range(zmin,zmax+1):
-                if space[ix,iy,iz] == 4:
-                    counter += 1
-                    if counter%20000 == 0:
-                        print '#',
-                    
-                    d,i = tree.query((x05[ix],y05[iy],z05[iz]))
-                    
-                    enSpace[ix, iy, iz] = totDet[i]
-    xmin1 = 100
-    xmax1 = -100
-    ymin1 = 100
-    ymax1 = -100
-    zmin1 = 100
-    zmax1 = -100
-    for ix in range(nx):
-        for iy in range(ny):
-            for iz in range(nz):
-                if enSpace[ix,iy,iz] >0:
-                    if ix >xmax1:
-                        xmax1 = ix
-                    if ix < xmin1:
-                        xmin1 = ix
-                    if iy >ymax1:
-                        ymax1 = iy
-                    if iy < ymin1:
-                        ymin1 = iy
-                    if iz >zmax1:
-                        zmax1 = iz
-                    if iz < zmin1:
-                        zmin1 = iz
-    print '\n',xmin1, xmax1, ymin1, ymax1, zmin1, zmax1
-    return enSpace
-enSpace = energy_distribution()
+enSpace = f()
 slicez = 77
 slicey = 76
 slicex = 52
@@ -216,6 +142,8 @@ def addAnotherSub():
     plt.colorbar(im)
     ax.set_title('energy distrib XZ')
 
+addAnotherSub()
+plt.show()
 ax = fig.add_subplot(2, 2, 3)
 slicex = 52
 im = ax.contourf(z05[zmin:zmax+1], y05[ymin:ymax+1],np.squeeze(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1]),
