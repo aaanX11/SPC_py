@@ -5,27 +5,12 @@ import matplotlib.colors as colors
 
 from scipy.spatial import KDTree
 
-cells = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\KUVSH.CEL', np.dtype(int))
+cells = np.loadtxt(r'D:\ipm_prj\calculations\tzp_2\KUVSH.CEL', np.dtype(int))
 
-listDet = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\kuvsh2\kuvsh2\initials\dets_fuel_v.lst')
-totDet = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\kuvsh2\kuvsh2\results\energy_fuel.res')
-
-nx = 116
-ny = 116
-nz = 200
-space = np.array([-1]*nx*ny*nz)
-
-print np.sum(cells[1::2])
-print cells.size
-print cells
+listDet = np.loadtxt(r'D:\ipm_prj\calculations\tzp_2\pechs\initials\volume_5.lst')
+totDet = np.loadtxt(r'D:\ipm_prj\calculations\tzp_2\pechs\results\energy_5.res')
 
 
-filled = 0
-for i in range(cells.size/2):
-    fill = cells[2*i+1]
-    space[filled:filled+fill] = cells[2*i]
-    filled += fill
-print filled
 
 gridF = open(r'D:\ipm_prj\calculations\emk_5\KUVSH.GRD', 'r')
 gridF.readline()#<FULL>
@@ -44,6 +29,23 @@ zi = map(float,gridF.readline().strip().split())
 gridF.close()
 
 
+nx = len(xi)-1
+ny = len(yi)-1
+nz = len(zi)-1
+space = np.array([-1]*nx*ny*nz)
+
+print np.sum(cells[1::2])
+print cells.size
+print cells
+
+
+filled = 0
+for i in range(cells.size/2):
+    fill = cells[2*i+1]
+    space[filled:filled+fill] = cells[2*i]
+    filled += fill
+print filled
+
 
 
 
@@ -52,16 +54,16 @@ print np.squeeze(space[:,ny/2:ny/2+1:1,:], axis=1).shape
 print len(xi), len(yi),len(zi)
 
 def get_range():
-    xmin = 100
-    xmax = -100
-    ymin = 100
-    ymax = -100
-    zmin = 100
-    zmax = -100
+    xmin = xi[-1]-1
+    xmax = xi[0]
+    ymin = yi[-1]-1
+    ymax = yi[0]
+    zmin = zi[-1]-1
+    zmax = zi[0]
     for ix in range(nx):
         for iy in range(ny):
             for iz in range(nz):
-                if space[ix,iy,iz] ==4:
+                if space[ix,iy,iz] == 5:
                     if ix >xmax:
                         xmax = ix
                     if ix < xmin:
@@ -80,13 +82,13 @@ print xmin, xmax, ymin, ymax, zmin, zmax
 
 
 def f():
-    enDistr = np.loadtxt(r'D:\ipm_prj\calculations\emk_5\energy_distribution')
+    enDistr = np.loadtxt(r'D:\ipm_prj\calculations\tzp_2\energy_distribution')
     enSpaceCheck = np.full((nx, ny, nz), 1e-32)
     for entry in enDistr:
         ix, iy, iz = map(lambda x: int(x)-1,entry[:-1])
         enSpaceCheck[ix, iy, iz] = entry[-1]
     return enSpaceCheck
-enSpaceCheck = f()
+#enSpaceCheck = f()
         
 
 xx = []
@@ -104,14 +106,15 @@ x05 = [0.5*(x1+x2) for x1,x2 in zip(xi[1:], xi[:-1])]
 y05 = [0.5*(x1+x2) for x1,x2 in zip(yi[1:], yi[:-1])]
 z05 = [0.5*(x1+x2) for x1,x2 in zip(zi[1:], zi[:-1])]
 
+
 def filter_dets():
     counter = 0
     listDet_filtered = []
     totDet_filtered = []
     for en,entry in zip(totDet, listDet[:, :-1]):
-        if x05[xmin]<=entry[0]<=x05[xmax] and y05[ymin]<=entry[0]<=y05[ymax] and z05[zmin]<=entry[0]<=z05[zmax]:
-            listDet_filtered.append(entry)
-            totDet_filtered.append(en)
+        #if x05[xmin]<=entry[0]<=x05[xmax] and y05[ymin]<=entry[1]<=y05[ymax] and z05[zmin]<=entry[2]<=z05[zmax]:
+        listDet_filtered.append(entry)
+        totDet_filtered.append(en)
     return listDet_filtered, totDet_filtered
 listDet, totDet = filter_dets()
 
@@ -121,11 +124,11 @@ def get_this_to_work():
     enSpaceToFile = np.zeros((dict(zip(unique, counts))[4],4))
     tree = KDTree(listDet)
     counter = 0
-    with open('energy_distribution', 'w') as f:
-        for ix in range(xmin,xmax+1):
-            for iy in range(ymin,ymax+1):
-                for iz in range(zmin,zmax+1):
-                    if space[ix,iy,iz] == 4:
+    with open(r'D:\ipm_prj\calculations\tzp_2\energy_distribution', 'w') as f:
+        for ix in range(nx):
+            for iy in range(ny):
+                for iz in range(nz):
+                    if space[ix,iy,iz] == 5:
                         
                         d,i = tree.query((x05[ix],y05[iy],z05[iz]))
                         
@@ -136,10 +139,10 @@ def energy_distribution():
     enSpace = np.full((nx, ny, nz), 1e-32)
     tree = KDTree(listDet)
     counter = 0
-    for ix in range(xmin,xmax+1):
-        for iy in range(ymin,ymax+1):
-            for iz in range(zmin,zmax+1):
-                if space[ix,iy,iz] == 4:
+    for ix in range(nx):
+        for iy in range(ny):
+            for iz in range(nz):
+                if space[ix,iy,iz] == 5:
                     counter += 1
                     if counter%20000 == 0:
                         print '#',
@@ -147,12 +150,7 @@ def energy_distribution():
                     d,i = tree.query((x05[ix],y05[iy],z05[iz]))
                     
                     enSpace[ix, iy, iz] = totDet[i]
-    xmin1 = 100
-    xmax1 = -100
-    ymin1 = 100
-    ymax1 = -100
-    zmin1 = 100
-    zmax1 = -100
+    return enSpace
     for ix in range(nx):
         for iy in range(ny):
             for iz in range(nz):
@@ -169,14 +167,13 @@ def energy_distribution():
                         zmax1 = iz
                     if iz < zmin1:
                         zmin1 = iz
-    print '\n',xmin1, xmax1, ymin1, ymax1, zmin1, zmax1
     return enSpace
 enSpace = energy_distribution()
-slicez = 77
-slicey = 76
-slicex = 52
-np.savetxt('xy.txt', np.squeeze(enSpace[xmin:xmax+1,ymin:ymax+1,slicez:slicez+1:1]), fmt='%1.2e')
-np.savetxt('xz.txt', np.squeeze(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1]), fmt='%1.2e')
+slicez = nz/2
+slicey = ny/2
+slicex = nz/2
+np.savetxt('xy.txt', np.squeeze(enSpace[:,:,slicez:slicez+1:1]), fmt='%1.2e')
+np.savetxt('xz.txt', np.squeeze(enSpace[:,slicey:slicey+1:1,:]), fmt='%1.2e')
 print np.argmax(enSpace)
 if np.isnan(enSpace).any():
     print 'alarm'
@@ -187,9 +184,9 @@ if np.isinf(enSpace).any():
 #https://docs.scipy.org/doc/numpy-1.15.0/reference/generated/numpy.argmax.html#numpy.argmax
 fig = plt.figure()
 ax = fig.add_subplot(2, 2, 1)
-#slicez = nz/2
-slicez = 77
-im = ax.contourf(x05[xmin:xmax+1], y05[ymin:ymax+1],np.squeeze(enSpace[xmin:xmax+1,ymin:ymax+1,slicez:slicez+1:1]),
+slicez = nz/2
+print len(xi), len(yi), np.squeeze(enSpace[:,:,slicez:slicez+1:1]).shape
+im = ax.pcolor(yi, xi, np.squeeze(enSpace[:,:,slicez:slicez+1:1]),
                  norm=colors.LogNorm(vmin=np.amin(enSpace[:,:,nz/2:nz/2+1:1]), vmax=np.amax(enSpace[:,:,slicez:slicez+1:1])),
                  cmap=plt.cm.coolwarm)
 print np.amin(enSpace[:,:,nz/2:nz/2+1:1]), np.amax(enSpace[:,:,slicez:slicez+1:1])
@@ -197,10 +194,9 @@ plt.colorbar(im)
 ax.set_title('energy distrib XY')
 def addSubplot():
     ax = fig.add_subplot(2, 2, 2)
-    #slicez = nz/2
-    slicez = 77
-    im = ax.contourf(x05[xmin:xmax+1], y05[ymin:ymax+1],np.squeeze(enSpaceCheck[xmin:xmax+1,ymin:ymax+1,slicez:slicez+1:1]),
-                 norm=colors.LogNorm(vmin=np.amin(enSpaceCheck[:,:,nz/2:nz/2+1:1]), vmax=np.amax(enSpaceCheck[:,:,slicez:slicez+1:1])),
+    slicez = nz/2
+    im = ax.pcolor(xi, yi,np.squeeze(enSpace[:,:,nz/2:nz/2+1:1]),
+                 norm=colors.LogNorm(vmin=np.amin(enSpace[:,:,nz/2:nz/2+1:1]), vmax=np.amax(enSpace[:,:,nz/2:nz/2+1:1])),
                  cmap=plt.cm.coolwarm)
     plt.colorbar(im)
     ax.set_title('energy distrib Check XY')
@@ -208,20 +204,18 @@ addSubplot()
 
 def addAnotherSub():
     ax = fig.add_subplot(2, 2, 2)
-    slicey = 76
-    im = ax.contourf(z05[zmin:zmax+1], x05[xmin:xmax+1],np.squeeze(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1]),
-                     norm=colors.LogNorm(vmin=np.amin(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1]), vmax=np.amax(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1])),                    
+    slicey = ny/2
+    im = ax.pcolor(zi, xi,np.squeeze(enSpace[:,slicey:slicey+1:1,:]),
+                     norm=colors.LogNorm(vmin=np.amin(enSpace[:,slicey:slicey+1:1,:]), vmax=np.amax(enSpace[:,slicey:slicey+1:1,:])),                    
                      cmap=plt.cm.coolwarm)
-    print np.amin(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1]), np.amax(enSpace[xmin:xmax+1,slicey:slicey+1:1,zmin:zmax+1])
     plt.colorbar(im)
     ax.set_title('energy distrib XZ')
 
 ax = fig.add_subplot(2, 2, 3)
-slicex = 52
-im = ax.contourf(z05[zmin:zmax+1], y05[ymin:ymax+1],np.squeeze(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1]),
-                 norm=colors.LogNorm(vmin=np.amin(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1]), vmax=np.amax(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1])),                    
+slicex = nx/2
+im = ax.pcolor(zi, yi,np.squeeze(enSpace[slicex:slicex+1:1,:,:]),
+                 norm=colors.LogNorm(vmin=np.amin(enSpace[slicex:slicex+1:1,:,:]), vmax=np.amax(enSpace[slicex:slicex+1:1,:,:])),                    
                  cmap=plt.cm.coolwarm)
-print np.amin(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1]), np.amax(enSpace[slicex:slicex+1:1,ymin:ymax+1,zmin:zmax+1])
 plt.colorbar(im)
 ax.set_title('energy distrib YZ')
 
