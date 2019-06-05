@@ -271,6 +271,7 @@ def write_jz_distr(path):
 
 
 if __name__ == '__main__':
+
     window = tk.Tk()
     if len(sys.argv) > 1:
         path = sys.argv[1]
