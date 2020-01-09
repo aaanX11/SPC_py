@@ -85,13 +85,17 @@ def read_dets(path):
         for line in detf:
             line = line.split('#')[0].strip()
 
-            if len(line)<3:
-                dets.append(d)
+            if len(line) < 3:
+                #dets.append(d)
                 continue
             if '[FAMILY]' in line:
+                print d
+                if d:
+                    # means d not empty
+                    dets.append(d)
                 d = {}
                 continue
-            k,v = line.strip().split('=')
+            k, v = line.strip().split('=')
             if "FAMILY_NAME" in k:
                 d["name"] = v
             elif "PARTICLE_TYPE" in k:
@@ -108,6 +112,9 @@ def read_dets(path):
                 d["list"] = v
             elif "TEMPLATE_FILE" in k:
                 d["templ"] = v
+        if d:
+            dets.append(d)
+            print d
     return dets                
 
 def readPECHS(path):
@@ -118,7 +125,7 @@ def readPECHS(path):
     
     spc = {}#readSpcPechs(os.path.join(path, config["spcdir"], source["spcfn"]))
 
-    dets = read_dets(os.path.join(path, config["inidir"], config["detfi"] ))
+    dets = read_dets(os.path.join(path, config["inidir"], config["detfi"]))
 
     return config, source, spc, dets
     

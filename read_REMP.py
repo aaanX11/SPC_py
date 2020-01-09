@@ -90,12 +90,12 @@ def process_grid(xi):
     
     xi05 = [0.5*(x1+x2) for x1,x2 in zip(xi[1:], xi[:-1])]
 
-    dxi05 = [x2-x1 for x1,x2 in zip(xi[1:], xi[:-1])]
+    dxi05 = [x2-x1 for x2,x1 in zip(xi[1:], xi[:-1])]
     dxi05.insert(0,dxi05[0])
     dxi05.append(dxi05[-1])
     
     xi05.insert(0, xi[0]-0.5*dxi05[0])
-    xi05.append(xi05[-1]+0.5*dxi05[-1])
+    xi05.append(xi[-1]+0.5*dxi05[-1])
     d['i'] = xi
     d['i05'] = xi05
     d['di05'] = dxi05

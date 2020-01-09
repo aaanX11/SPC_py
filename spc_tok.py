@@ -24,7 +24,7 @@ def filter_dets(grd, space, lays, totDet, listDet):
     counter = 0
     listDet_filtered = {l: [] for l in lays}
     totDet_filtered = {l: [] for l in lays}
-    for tok, entry in zip(totDet, listDet[:, :-1]):
+    for tok, entry in zip(totDet, listDet[:, :3]):
         if not (grd['x']['i'][0] <= entry[0] <= grd['x']['i'][-1] and grd['y']['i'][0] <= entry[1] <= grd['y']['i'][-1] and grd['z']['i'][0] <= entry[2] <= grd['z']['i'][-1]):
             continue
         
@@ -41,17 +41,23 @@ def filter_dets(grd, space, lays, totDet, listDet):
         iz1 = next((idx for idx, v in enumerate(grd['z']['i']) if v > entry[2]), len(grd['z']['i']))
         iz = [iz1]
         if entry[2] in grd['z']['i']:
-            iz.append(iz1-1)        
-        lays_near = np.unique(space(np.ix_(ix, iy, iz))).flatten()
+            iz.append(iz1-1)
+
+        lays_near = np.unique(space[ix, iy, iz]).flatten()
+        lays_near = np.delete(lays_near, np.where(lays_near == -1))
         for lay in lays_near:
             listDet_filtered[lay].append(entry)
             totDet_filtered[lay].append(tok)
-    trees = {lay: KDTree(listDet_filtered[lay]) for lay in lays}
+
+    trees = {}
+    for lay in lays:
+        if len(listDet_filtered[lay]) > 0:
+            trees[lay] = KDTree(listDet_filtered[lay])
     return trees, totDet_filtered
 
 
 def process_tok_x(grd, space, trees, jx_space_distr, totDet):
-    
+    print 'x'
     counter = 0
     for ix, x in enumerate(grd['x']['i05'][1:-1]):
         for iy, y in enumerate(grd['y']['i']):
@@ -60,18 +66,23 @@ def process_tok_x(grd, space, trees, jx_space_distr, totDet):
                 counter += 1
                 if counter % 20000 == 0:
                     print '#',
+                if counter % 200000 == 0:
+                    print '\n'
 
-                lays_near = (space[ix+1][iy][iz], space[ix+1][iy+1][iz], space[ix+1][iy][iz+1], space[ix+1][iy+1][iz+1])
+                lays_near = np.asarray((space[ix+1][iy][iz], space[ix+1][iy+1][iz],
+                                        space[ix+1][iy][iz+1], space[ix+1][iy+1][iz+1])).flatten()
                 lays_near = np.delete(lays_near, np.where(lays_near == -1))
                 lays_counted = np.unique(lays_near, return_counts=True)
-                lay = lays_counted[0][[np.argmax(lays_counted[1])]]
+                lay = lays_counted[0][[np.argmax(lays_counted[1])]][0]
+                if lay in trees:
+                    d, i = trees[lay].query((x, y, z))
 
-                d, i = trees[lay].query((x, y, z))
-
-                jx_space_distr[ix+1, iy, iz] += totDet[lay][i]
+                    jx_space_distr[ix, iy, iz] -= totDet[lay][i][0]
+    print '\n'
 
 
 def process_tok_y(grd, space, trees, jy_space_distr, totDet):
+    print 'y'
     counter = 0
     for ix, x in enumerate(grd['x']['i']):
         for iy, y in enumerate(grd['y']['i05'][1:-1]):
@@ -80,19 +91,22 @@ def process_tok_y(grd, space, trees, jy_space_distr, totDet):
                 counter += 1
                 if counter % 20000 == 0:
                     print '#',
+                if counter % 200000 == 0:
+                    print '\n'
 
-                lays_near = (space[ix][iy + 1][iz], space[ix + 1][iy + 1][iz],
-                             space[ix][iy + 1][iz + 1], space[ix + 1][iy + 1][iz + 1])
+                lays_near = np.asarray((space[ix][iy + 1][iz], space[ix + 1][iy + 1][iz],
+                             space[ix][iy + 1][iz + 1], space[ix + 1][iy + 1][iz + 1]))
                 lays_near = np.delete(lays_near, np.where(lays_near == -1))
                 lays_counted = np.unique(lays_near, return_counts=True)
-                lay = lays_counted[0][[np.argmax(lays_counted[1])]]
+                lay = lays_counted[0][[np.argmax(lays_counted[1])]][0]
+                if lay in trees:
+                    d, i = trees[lay].query((x, y, z))
 
-                d, i = trees[lay].query((x, y, z))
-
-                jy_space_distr[ix, iy + 1, iz] += totDet[lay][i]
+                    jy_space_distr[ix, iy, iz] -= totDet[lay][i][1]
 
 
 def process_tok_z(grd, space, trees, jz_space_distr, totDet):
+    print 'z'
     counter = 0
     for ix, x in enumerate(grd['x']['i']):
         for iy, y in enumerate(grd['y']['i']):
@@ -101,16 +115,17 @@ def process_tok_z(grd, space, trees, jz_space_distr, totDet):
                 counter += 1
                 if counter % 20000 == 0:
                     print '#',
+                if counter % 200000 == 0:
+                    print '\n'
 
-                lays_near = (space[ix][iy][iz + 1], space[ix + 1][iy][iz + 1],
-                             space[ix][iy + 1][iz + 1], space[ix + 1][iy + 1][iz + 1])
+                lays_near = np.asarray((space[ix][iy][iz + 1], space[ix + 1][iy][iz + 1],
+                             space[ix][iy + 1][iz + 1], space[ix + 1][iy + 1][iz + 1]))
                 lays_near = np.delete(lays_near, np.where(lays_near == -1))
                 lays_counted = np.unique(lays_near, return_counts=True)
-                lay = lays_counted[0][[np.argmax(lays_counted[1])]]
-
-                d, i = trees[lay].query((x, y, z))
-
-                jz_space_distr[ix, iy, iz + 1] += totDet[lay][i]
+                lay = lays_counted[0][[np.argmax(lays_counted[1])]][0]
+                if lay in trees:
+                    d, i = trees[lay].query((x, y, z))
+                    jz_space_distr[ix, iy, iz] -= totDet[lay][i][2]
 
 
 if __name__ == '__main__':

@@ -22,9 +22,9 @@ def read_energy_distribution(path):
 def filter_dets(grd, space, lays, totDet, listDet):
     
     counter = 0
-    listDet_filtered = {l:[] for l in lays}
-    totDet_filtered = {l:[] for l in lays}
-    for en,entry in zip(totDet, listDet[:, :-1]):
+    listDet_filtered = {l: [] for l in lays}
+    totDet_filtered = {l: [] for l in lays}
+    for en, entry in zip(totDet, listDet[:, :-1]):
         if not (grd['x']['i'][0] <= entry[0] <= grd['x']['i'][-1] and grd['y']['i'][0] <= entry[1] <= grd['y']['i'][-1] and grd['z']['i'][0] <= entry[2] <= grd['z']['i'][-1]):
             continue
         
@@ -42,13 +42,11 @@ def filter_dets(grd, space, lays, totDet, listDet):
         iz = [iz1]
         if entry[2] in grd['z']['i']:
             iz.append(iz1-1)        
-        
-        for ix_ in ix:
-            for iy_ in iy:
-                for iz_ in iz:
-                    lay = space[ix_][iy_][iz_]
-                    listDet_filtered[lay].append(entry)
-                    totDet_filtered[lay].append(en)
+
+        lays_near = np.unique(space[ix, iy, iz]).flatten()
+        for lay in lays_near:
+            listDet_filtered[lay].append(entry)
+            totDet_filtered[lay].append(en)
     trees = {}
     for lay in lays:
         if len(listDet_filtered[lay]) > 0:
@@ -65,18 +63,13 @@ def process_en(grd, space, trees, enSpace, totDet):
             for iz in range(len(grd['z']['i'])-1):
                 
                 counter += 1
-                if counter%20000 == 0:
+                if counter % 20000 == 0:
                     print '#',
                     
                 lay = space[ix+1][iy+1][iz+1]
                 if lay in trees:
                     d, i = trees[lay].query((grd['x']['i05'][ix+1], grd['y']['i05'][iy+1], grd['z']['i05'][iz+1]))
-                
-                    #f.write("\t".join(map(str,[ix+1, iy+1, iz+1]))+"\t{:.3E}\n".format(totDet[lay][i]))
                     enSpace[ix, iy, iz] += totDet[lay][i]
-
-
-
 
 
 if __name__ == '__main__':
